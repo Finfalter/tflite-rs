@@ -224,6 +224,7 @@ fn import_tflite_types() {
         .whitelist_type("tflite::OpResolver")
         .opaque_type("tflite::OpResolver")
         .whitelist_type("TfLiteTensor")
+        .whitelist_type("TfLiteRegistration")
         .opaque_type("std::string")
         .opaque_type("flatbuffers::NativeTable")
         .blacklist_type("std")

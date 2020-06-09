@@ -1,7 +1,7 @@
 use std::mem;
 
 use crate::bindings::tflite as bindings;
-use crate::interpreter::op_resolver::OpResolver;
+use crate::interpreter::op_resolver::{OpResolver, Registration};
 
 cpp! {{
     #include "tensorflow/lite/kernels/register.h"
@@ -28,6 +28,20 @@ impl Drop for Resolver {
 impl OpResolver for Resolver {
     fn get_resolver_handle(&self) -> &bindings::OpResolver {
         self.handle.as_ref()
+    }
+
+    fn add_custom<T: AsRef<str>>(&self, name: T, registration: &Registration) {
+        use std::ops::Deref;
+        let name_cstr = std::ffi::CString::new(name.as_ref()).unwrap();
+        let name = name_cstr.as_ptr();
+        let resolver = self.handle.deref();
+
+        #[allow(clippy::forget_copy, clippy::useless_transmute, deprecated)]
+        unsafe {
+            cpp!([resolver as "BuiltinOpResolver*", name as "const char*", registration as "const TfLiteRegistration*"] {
+                resolver->AddCustom(name, registration);
+            })
+        };
     }
 }
 
