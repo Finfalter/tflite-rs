@@ -9,6 +9,7 @@ repository = "https://github.com/boncheolgu/tflite-rs"
 readme = "README.md"
 edition = "2018"
 documentation = "https://docs.rs/crate/tflite"
+links = "tensorflow-lite"
 
 # filter in only necessary files
 # tar tvaf target/package/tflite-*.crate | awk '{print $3 "\t" $6}' | sort -n

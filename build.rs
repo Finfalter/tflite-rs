@@ -169,6 +169,7 @@ fn prepare_tensorflow_library() {
         }
         println!("cargo:rustc-link-search=native={}", out_dir);
         println!("cargo:rustc-link-lib=static=tensorflow-lite{}", binary_changing_features);
+        println!("cargo:include={}", tflite.parent().unwrap().to_str().unwrap());
     }
     #[cfg(not(feature = "build"))]
     {
