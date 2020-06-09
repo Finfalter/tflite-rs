@@ -107,6 +107,14 @@ fn prepare_tensorflow_library() {
             // Now that tensorflow has an aarch64_makefile.inc use theirs
             let target = if &arch == "aarch64" { &arch } else { &os };
 
+            // Copy our patched makefile to the tensorflow lite tools
+            // directory
+            std::fs::copy(
+                submodules().join("tflite-Makefile"),
+                tflite.join("lite/tools/make/Makefile"),
+            )
+            .unwrap();
+
             #[cfg(feature = "debug_tflite")]
             {
                 println!("Feature debug_tflite enabled. Changing optimization to 0");
