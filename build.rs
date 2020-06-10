@@ -198,6 +198,8 @@ fn prepare_tensorflow_library() {
     }
     println!("cargo:rustc-link-lib=dylib=pthread");
     println!("cargo:rustc-link-lib=dylib=dl");
+    #[cfg(all(target_arch = "arm", any(target_os = "linux", target_os = "android")))]
+    println!("cargo:rustc-link-lib=atomic");
 }
 
 // This generates "tflite_types.rs" containing structs and enums which are inter-operable with Glow.
