@@ -1,5 +1,6 @@
 mod builder;
 pub mod context;
+mod external_context;
 mod fbmodel;
 pub mod op_resolver;
 pub mod ops;
@@ -10,8 +11,10 @@ use std::slice;
 use libc::{c_int, size_t};
 
 use crate::{bindings, Error, Result};
+pub use bindings::TfLiteExternalContext;
 pub use builder::InterpreterBuilder;
 use context::{ElemKindOf, ElementKind, QuantizationParams, TensorInfo};
+pub use external_context::{ExternalContext, ExternalContextType};
 pub use fbmodel::FlatBufferModel;
 use op_resolver::OpResolver;
 
@@ -137,6 +140,40 @@ where
             })
         };
         println!("Set num threads to {}", threads);
+    }
+
+    /// Set the external context
+    pub fn set_external_context(
+        &mut self,
+        context_type: ExternalContextType,
+        context: &mut ExternalContext,
+    ) {
+        let interpreter = self.handle_mut();
+
+        let context_type = match context_type {
+            ExternalContextType::Eigen => bindings::TfLiteExternalContextType::kTfLiteEigenContext,
+            ExternalContextType::GemmLowp => {
+                bindings::TfLiteExternalContextType::kTfLiteGemmLowpContext
+            }
+            ExternalContextType::EdgeTpu => {
+                bindings::TfLiteExternalContextType::kTfLiteEdgeTpuContext
+            }
+            ExternalContextType::CpuBackend => {
+                bindings::TfLiteExternalContextType::kTfLiteCpuBackendContext
+            }
+            ExternalContextType::MaxExternal => {
+                bindings::TfLiteExternalContextType::kTfLiteMaxExternalContexts
+            }
+        };
+
+        let external_context = context.handle_mut();
+
+        #[allow(clippy::forget_copy, deprecated)]
+        unsafe {
+            cpp!([interpreter as "Interpreter*", context_type as "TfLiteExternalContextType", external_context as "TfLiteExternalContext*"] {
+                interpreter->SetExternalContext(context_type, external_context);
+            })
+        };
     }
 
     /// Read only access to list of inputs.
