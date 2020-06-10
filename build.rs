@@ -43,6 +43,14 @@ fn prepare_tensorflow_source() -> PathBuf {
             )
             .unwrap_or_else(|_| panic!("Unable to copy makefile {}", f));
         }
+
+        // Copy our patched makefile to the tensorflow lite tools
+        // directory
+        std::fs::copy(
+            manifest_dir().join("data").join("tflite-Makefile"),
+            tf_src_dir.join("lite/tools/make/Makefile"),
+        )
+        .unwrap_or_else(|_| panic!("Unable to copy tflite-Makefile"));
     }
 
     let download_dir = tf_src_dir.join("lite/tools/make/downloads");
@@ -106,14 +114,6 @@ fn prepare_tensorflow_library() {
             // Use cargo's cross-compilation information while building tensorflow
             // Now that tensorflow has an aarch64_makefile.inc use theirs
             let target = if &arch == "aarch64" { &arch } else { &os };
-
-            // Copy our patched makefile to the tensorflow lite tools
-            // directory
-            std::fs::copy(
-                submodules().join("tflite-Makefile"),
-                tflite.join("lite/tools/make/Makefile"),
-            )
-            .unwrap();
 
             #[cfg(feature = "debug_tflite")]
             {
