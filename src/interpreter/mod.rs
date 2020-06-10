@@ -67,15 +67,22 @@ where
         builder: InterpreterBuilder<'a, Op>,
     ) -> Result<Self> {
         let handle = unsafe { Box::from_raw(handle) };
-        let mut interpreter = Self { handle, _builder: builder };
+        let interpreter = Self { handle, _builder: builder };
         // # Safety
         // Always allocate tensors so we don't get into a state
         // where we try to read from or write to unallocated memory
         // without doing this it is possible to have undefined behavior
         // outside of an unsafe block
-        interpreter.allocate_tensors()?;
+
+        // TODO(2020-06-09): allocating tensors here, before providing the edge
+        // tpu external context will cause `allocate_tensors` to fail. In the
+        // case that the caller needs to do some action before allocating
+        // tensors this library might need to be redesigned to prevent
+        // callers from calling certain function for  allocate_tensors is called?
+        // interpreter.allocate_tensors()?;
         Ok(interpreter)
     }
+
     /// Update allocations for all tensors. This will redim dependent tensors using
     /// the input tensor dimensionality as given. This is relatively expensive.
     /// If you know that your sizes are not changing, you need not call this.
