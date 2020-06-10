@@ -146,7 +146,7 @@ where
     pub fn set_external_context(
         &mut self,
         context_type: ExternalContextType,
-        context: &mut ExternalContext,
+        context: ExternalContext,
     ) {
         let interpreter = self.handle_mut();
 
@@ -166,7 +166,7 @@ where
             }
         };
 
-        let external_context = context.handle_mut();
+        let external_context = context.into_raw();
 
         #[allow(clippy::forget_copy, deprecated)]
         unsafe {
