@@ -51,6 +51,12 @@ fn prepare_tensorflow_source() -> PathBuf {
             tf_src_dir.join("lite/tools/make/Makefile"),
         )
         .unwrap_or_else(|_| panic!("Unable to copy tflite-Makefile"));
+
+        // 2020-06-09: vscode / gopls currently doesn't ignore directories,
+        // not even hidden ones, so gopls reaches into the depth of rust target
+        // directories to complain about something or another in the tensorflow
+        // libraries. Just delete them because don't need them here.
+        let _ = std::fs::remove_dir_all(tf_src_dir.join("go"));
     }
 
     let download_dir = tf_src_dir.join("lite/tools/make/downloads");
