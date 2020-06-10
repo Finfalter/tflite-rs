@@ -32,6 +32,7 @@ pub struct TensorInfo {
     pub name: String,
     pub element_kind: ElementKind,
     pub dims: Vec<usize>,
+    pub params: QuantizationParams,
 }
 
 impl fmt::Debug for TensorInfo {
@@ -56,6 +57,7 @@ impl<'a> From<&'a bindings::TfLiteTensor> for TensorInfo {
                 };
                 slice.iter().map(|n| *n as usize).collect()
             },
+            params: t.params,
         }
     }
 }
