@@ -479,6 +479,34 @@ where
         })
     }
 
+    pub unsafe fn multi_tensor_data_mut<T>(&mut self, tensor_index: &[TensorIndex]) -> Result<Vec<&mut [T]>>
+    where
+        T: ElemKindOf,
+    {
+        tensor_index
+            .iter()
+            .map(|&tensor_index| {
+
+                let inner = self
+                    .tensor_inner(tensor_index)
+                    .ok_or_else(|| Error::internal_error("invalid tensor index"))?;
+                let tensor_info: TensorInfo = inner.into();
+
+                if tensor_info.element_kind != T::elem_kind_of() {
+                    return Err(Error::InternalError(format!(
+                        "Invalid type reference of `{:?}` to the original type `{:?}`",
+                        T::elem_kind_of(),
+                        tensor_info.element_kind
+                    )));
+                }
+
+                Ok(
+                    slice::from_raw_parts_mut(inner.data.raw as *mut T, inner.bytes / mem::size_of::<T>())
+                )
+            })
+            .collect::<Result<Vec<_>>>()
+    }
+
     pub fn tensor_buffer(&self, tensor_index: TensorIndex) -> Option<&[u8]> {
         let inner = self.tensor_inner(tensor_index)?;
 
