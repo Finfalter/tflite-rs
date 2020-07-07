@@ -146,7 +146,6 @@ where
                 interpreter->SetNumThreads(threads);
             })
         };
-        println!("Set num threads to {}", threads);
     }
 
     /// Set the external context
