@@ -2,7 +2,16 @@
 
 # Rust bindings for TensorFlow Lite
 
-This crates provides TensorFlow Lite APIs.
+This crates provides TensorFlow Lite APIs. It binds to the following Tensorflow release:
+
+```bash
+# TF release 2.5.0 as of 05/17/2021.
+TENSORFLOW_COMMIT = "a4dfb8d1a71385bd6d122e4f27f86dcebb96712d"
+TENSORFLOW_SHA256 = "cb99f136dc5c89143669888a44bfdd134c086e1e2d9e36278c1eb0f03fe62d76"
+```
+
+See [libedgetpu repo](https://github.com/google-coral/libedgetpu/blob/master/workspace.bzl)
+
 Please read the [`API documentation on docs.rs`](https://docs.rs/crate/tflite)
 
 ### Using the interpreter from a model file

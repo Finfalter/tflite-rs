@@ -18,6 +18,11 @@ pub use external_context::{ExternalContext, ExternalContextType};
 pub use fbmodel::FlatBufferModel;
 use op_resolver::OpResolver;
 
+// cpp! {{
+//     #include <ctime>
+//     //using namespace std;
+// }}
+
 cpp! {{
     #include "tensorflow/lite/interpreter.h"
     #include "tensorflow/lite/optional_debug_tools.h"

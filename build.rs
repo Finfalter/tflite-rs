@@ -35,54 +35,26 @@ fn prepare_tensorflow_source() -> PathBuf {
     if !tf_src_dir.exists() {
         fs_extra::dir::copy(submodules.join("tensorflow"), &out_dir, &copy_dir)
             .expect("Unable to copy tensorflow");
-
-        // TODO: remove these when we upgrade tensorflow far enough that they exist
-        for f in &["aarch64_makefile.inc", "linux_makefile.inc"] {
-            std::fs::copy(
-                manifest_dir().join("data").join(f),
-                tf_src_dir.join("lite/tools/make/targets").join(f),
-            )
-            .unwrap_or_else(|_| panic!("Unable to copy makefile {}", f));
-        }
-
-        // Copy our patched makefile to the tensorflow lite tools
-        // directory
-        std::fs::copy(
-            manifest_dir().join("data").join("tflite-Makefile"),
-            tf_src_dir.join("lite/tools/make/Makefile"),
-        )
-        .unwrap_or_else(|_| panic!("Unable to copy tflite-Makefile"));
-
-        // 2020-06-09: vscode / gopls currently doesn't ignore directories,
-        // not even hidden ones, so gopls reaches into the depth of rust target
-        // directories to complain about something or another in the tensorflow
-        // libraries. Just delete them because don't need them here.
-        let _ = std::fs::remove_dir_all(tf_src_dir.join("go"));
+            
+        println!("Moving source took {:?}", start.elapsed());
     }
-
+    
+    println!("Patching flatbuffers.h ..");
+    
     let download_dir = tf_src_dir.join("lite/tools/make/downloads");
-    if !download_dir.exists() {
-        fs_extra::dir::copy(
-            submodules.join("downloads"),
-            download_dir.parent().unwrap(),
-            &copy_dir,
-        )
-        .expect("Unable to copy download dir");
+    let flatbuffers_h = download_dir.join("flatbuffers/include/flatbuffers/flatbuffers.h");
+    let flatbuffers =
+        std::fs::read_to_string(&flatbuffers_h).expect("Unable to read flatbuffers.h");
+    std::fs::write(
+        flatbuffers_h,
+        flatbuffers.replace(
+            "struct NativeTable {};",
+            "struct NativeTable { virtual ~NativeTable() {} };",
+        ),
+    )
+    .expect("Unable to write to flatbuffers.h");
 
-        let flatbuffers_h = download_dir.join("flatbuffers/include/flatbuffers/flatbuffers.h");
-        let flatbuffers =
-            std::fs::read_to_string(&flatbuffers_h).expect("Unable to read flatbuffers.h");
-        std::fs::write(
-            flatbuffers_h,
-            flatbuffers.replace(
-                "struct NativeTable { virtual ~NativeTable() {} };",
-                "struct NativeTable {};",
-            ),
-        )
-        .expect("Unable to write to flatbuffers.h");
-    }
-
-    println!("Moving source took {:?}", start.elapsed());
+    println!("Patching flatbuffers.h done");
 
     tf_src_dir
 }
@@ -169,7 +141,7 @@ fn prepare_tensorflow_library() {
                 .find(|p| p.exists())
                 .expect("Unable to find libtensorflow-lite.a");
             std::fs::copy(&library, &tf_lib_name).unwrap_or_else(|_| {
-                panic!(format!("Unable to copy libtensorflow-lite.a to {}", tf_lib_name.display()))
+                panic!("Unable to copy libtensorflow-lite.a to {}", tf_lib_name.display())
             });
 
             println!("Building tflite from source took {:?}", start.elapsed());
@@ -246,7 +218,9 @@ fn import_tflite_types() {
         .derive_eq(true)
         .header("csrc/tflite_wrapper.hpp")
         .clang_arg(format!("-I{}/tensorflow", submodules_str))
-        .clang_arg(format!("-I{}/downloads/flatbuffers/include", submodules_str))
+        //.clang_arg(format!("-I{}/downloads/flatbuffers/include", submodules_str))
+        .clang_arg(format!("-I{}/tensorflow/tensorflow/lite/tools/make/downloads/flatbuffers", submodules_str))
+        .clang_arg(format!("-I{}/tensorflow/tensorflow/lite/tools/make/downloads/flatbuffers/include", submodules_str))
         .clang_arg("-DGEMMLOWP_ALLOW_SLOW_SCALAR_FALLBACK")
         .clang_arg("-x")
         .clang_arg("c++")
@@ -266,7 +240,9 @@ fn build_inline_cpp() {
 
     cpp_build::Config::new()
         .include(submodules.join("tensorflow"))
-        .include(submodules.join("downloads/flatbuffers/include"))
+        //.include(submodules.join("downloads/flatbuffers/include"))
+        .include(submodules.join("tensorflow/tensorflow/lite/tools/make/downloads/flatbuffers"))
+        .include(submodules.join("tensorflow/tensorflow/lite/tools/make/downloads/flatbuffers/include"))
         .flag("-fPIC")
         .flag("-std=c++14")
         .flag("-Wno-sign-compare")
