@@ -17,11 +17,34 @@ fn submodules() -> PathBuf {
 
 #[cfg(feature = "build")]
 fn prepare_tensorflow_source() -> PathBuf {
+
+    let start = Instant::now();
+    download_dependencies();
+    println!("Downloading dependencies took {:?}", start.elapsed());
+    
+    
+    println!("Patching flatbuffers.h ..");
+    let submodules = submodules();
+    let download_dir = submodules.join("tensorflow/tensorflow/lite/tools/make/downloads");
+    let flatbuffers_h = download_dir.join("flatbuffers/include/flatbuffers/flatbuffers.h");
+    let flatbuffers = std::fs::read_to_string(&flatbuffers_h)
+        .expect("Unable to read flatbuffers.h");
+    
+    std::fs::write(
+        flatbuffers_h,
+        flatbuffers.replace(
+            "struct NativeTable {};",
+            "struct NativeTable { virtual ~NativeTable() {} };",
+        ),
+    )
+    .expect("Unable to write to flatbuffers.h");
+    println!("Patching flatbuffers.h done");
+
+
     println!("Moving tflite source");
     let start = Instant::now();
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let tf_src_dir = out_dir.join("tensorflow/tensorflow");
-    let submodules = submodules();
 
     let copy_dir = fs_extra::dir::CopyOptions {
         overwrite: true,
@@ -38,23 +61,6 @@ fn prepare_tensorflow_source() -> PathBuf {
             
         println!("Moving source took {:?}", start.elapsed());
     }
-    
-    println!("Patching flatbuffers.h ..");
-    
-    let download_dir = tf_src_dir.join("lite/tools/make/downloads");
-    let flatbuffers_h = download_dir.join("flatbuffers/include/flatbuffers/flatbuffers.h");
-    let flatbuffers =
-        std::fs::read_to_string(&flatbuffers_h).expect("Unable to read flatbuffers.h");
-    std::fs::write(
-        flatbuffers_h,
-        flatbuffers.replace(
-            "struct NativeTable {};",
-            "struct NativeTable { virtual ~NativeTable() {} };",
-        ),
-    )
-    .expect("Unable to write to flatbuffers.h");
-
-    println!("Patching flatbuffers.h done");
 
     tf_src_dir
 }
@@ -240,7 +246,6 @@ fn build_inline_cpp() {
 
     cpp_build::Config::new()
         .include(submodules.join("tensorflow"))
-        //.include(submodules.join("downloads/flatbuffers/include"))
         .include(submodules.join("tensorflow/tensorflow/lite/tools/make/downloads/flatbuffers"))
         .include(submodules.join("tensorflow/tensorflow/lite/tools/make/downloads/flatbuffers/include"))
         .flag("-fPIC")
@@ -250,6 +255,27 @@ fn build_inline_cpp() {
         .debug(true)
         .opt_level(if cfg!(debug_assertions) { 0 } else { 2 })
         .build("src/lib.rs");
+}
+
+fn download_dependencies() {
+    let submodules = submodules();
+    let download_directory = submodules.join("tensorflow/tensorflow/lite/tools/make/downloads");
+
+    if !download_directory.exists() {
+        let download_script = submodules.join("tensorflow/tensorflow/lite/tools/make/download_dependencies.sh");
+
+        println!("Executing {:?}", download_script);
+        
+        let download = std::process::Command::new(&download_script)
+            .status()
+            .expect("Unable to download tflite dependencies");
+
+        if download.success() {
+            println!("directory created: {:?}", download_script.parent().unwrap().join("downloads"));
+        } else {
+            println!("failed to download necessary dependencies");
+        }
+    }
 }
 
 fn import_stl_types() {
@@ -509,7 +535,7 @@ fn main() {
         generate_vector_impl().unwrap();
         generate_builtin_options_impl().unwrap();
     }
+    prepare_tensorflow_library();
     import_tflite_types();
     build_inline_cpp();
-    prepare_tensorflow_library();
 }
