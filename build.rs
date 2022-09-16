@@ -281,7 +281,7 @@ fn prepare_tensorflow_library() {
     #[cfg(feature = "build")]
     {
         let tflite = prepare_tensorflow_source();
-        
+
         let out_dir = env::var("OUT_DIR").unwrap();
         // append tf_lib_name with features that can change how it is built
         // so a cached version that doesn't match expectations isn't used
@@ -386,6 +386,8 @@ fn prepare_tensorflow_source() -> PathBuf {
 
     download_dependencies();
     
+    remove_unnecessary_sources();
+
     patch_flatbuffers();
     
     let tf_src_dir = move_tflite_source();
@@ -415,6 +417,24 @@ fn download_dependencies() {
         }
     }
     println!("Downloading dependencies took {:?}", start.elapsed());
+}
+
+fn remove_unnecessary_sources() {
+    let start = Instant::now();
+
+    let submodules = submodules();
+    let download_directory = submodules.join("tensorflow/tensorflow/lite/tools/make/downloads");
+
+    if download_directory.exists() {
+        let cleanup_script = submodules.join("cleanup-downloads.sh");
+        println!("Executing {:?}", cleanup_script);
+
+        std::process::Command::new(&cleanup_script)
+            .status()
+            .expect("Unable to cleanup unnecessary download dependencies");
+
+        println!("Removing unnecessary download files took {:?}", start.elapsed());
+    }
 }
 
 fn patch_flatbuffers() {
