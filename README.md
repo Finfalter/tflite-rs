@@ -15,7 +15,7 @@ For further details related to versioning, see [libedgetpu repo](https://github.
 
 Please also read the [`API documentation on docs.rs`](https://docs.rs/crate/tflite).
 
-### Using the interpreter from a model file
+## Using the interpreter from a model file
 
 The following example shows how to use the TensorFlow Lite interpreter when provided a TensorFlow Lite FlatBuffer file.
 The example also demonstrates how to run inference on input data.
@@ -180,4 +180,13 @@ fn flatbuffer_model_apis_mutate() {
     assert!(subgraph.inputs.as_slice().is_empty());
     assert_eq!(subgraph.outputs.as_slice(), &[1, 2, 3, 4]);
 }
+```
+
+## Tests
+
+Just executing with `cargo test` runs the tests concurrently with multiple tests. This way, there is a segmentation fault sporadically in test __flatbuffer_model_apis_inspect__ due to a race condition in the `Model`. Test with either of the following in order to execute the tests single threaded.
+
+```bash
+cargo test -- --test-threads=1
+cargo test --lib --package=tflite -- --test-threads=1 
 ```

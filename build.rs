@@ -20,11 +20,11 @@ fn import_stl_types() {
 
     let bindings = Builder::default()
         .enable_cxx_namespaces()
-        .whitelist_type("std::string")
+        .allowlist_type("std::string")
         .opaque_type("std::string")
-        .whitelist_type("rust::.+")
+        .allowlist_type("rust::.+")
         .opaque_type("rust::.+")
-        .blacklist_type("std")
+        .blocklist_type("std")
         .header("csrc/stl_wrapper.hpp")
         .layout_tests(false)
         .derive_partialeq(true)
@@ -374,6 +374,7 @@ fn prepare_tensorflow_library() {
         };
         println!("cargo:rustc-link-lib={}=tensorflow-lite", static_dynamic);
         println!("cargo:rerun-if-changed={}", lib_dir);
+        //println!("cargo:rerun-if-changed=build.rs");
     }
     println!("cargo:rustc-link-lib=dylib=pthread");
     println!("cargo:rustc-link-lib=dylib=dl");
@@ -445,15 +446,30 @@ fn patch_flatbuffers() {
     println!("reading {:?} ..", &flatbuffers_h);
     let flatbuffers = std::fs::read_to_string(&flatbuffers_h)
         .expect("Unable to read flatbuffers.h");
-    
+  
+    let replacement = "#ifdef FLATBUFFERS_POLYMORPHIC_NATIVETABLE
+    struct NativeTable { virtual ~NativeTable() {} };
+#else 
+    struct NativeTable { }; 
+#endif";
+
     println!("writing patch to flatbuffers.h ..");
     std::fs::write(
         flatbuffers_h,
-        flatbuffers.replace(
+        flatbuffers.replacen(
             "struct NativeTable {};",
-            "struct NativeTable { virtual ~NativeTable() {} };",
+            replacement,
+            1
         ),
     )
+
+    // std::fs::write(
+    //     flatbuffers_h,
+    //     flatbuffers.replace(
+    //         "struct NativeTable {};",
+    //         "struct NativeTable { virtual ~NativeTable() {} };",
+    //     ),
+    // )
     .expect("Unable to write to flatbuffers.h");
     println!("Patching flatbuffers.h done");
 }
@@ -490,7 +506,7 @@ fn import_tflite_types() {
     let submodules = submodules();
     let submodules_str = submodules.to_string_lossy();
     let bindings = Builder::default()
-        .whitelist_recursively(true)
+        .allowlist_recursively(true)
         .prepend_enum_name(false)
         .impl_debug(true)
         .with_codegen_config(CodegenConfig::TYPES)
@@ -499,28 +515,28 @@ fn import_tflite_types() {
         .derive_default(true)
         .size_t_is_usize(true)
         // for model APIs
-        .whitelist_type("tflite::ModelT")
-        .whitelist_type(".+OptionsT")
-        .blacklist_type(".+_TableType")
+        .allowlist_type("tflite::ModelT")
+        .allowlist_type(".+OptionsT")
+        .blocklist_type(".+_TableType")
         // for interpreter
-        .whitelist_type("tflite::FlatBufferModel")
+        .allowlist_type("tflite::FlatBufferModel")
         .opaque_type("tflite::FlatBufferModel")
-        .whitelist_type("tflite::InterpreterBuilder")
+        .allowlist_type("tflite::InterpreterBuilder")
         .opaque_type("tflite::InterpreterBuilder")
-        .whitelist_type("tflite::Interpreter")
+        .allowlist_type("tflite::Interpreter")
         .opaque_type("tflite::Interpreter")
-        .whitelist_type("tflite::ops::builtin::BuiltinOpResolver")
+        .allowlist_type("tflite::ops::builtin::BuiltinOpResolver")
         .opaque_type("tflite::ops::builtin::BuiltinOpResolver")
-        .whitelist_type("tflite::OpResolver")
+        .allowlist_type("tflite::OpResolver")
         .opaque_type("tflite::OpResolver")
-        .whitelist_type("TfLiteTensor")
-        .whitelist_type("TfLiteRegistration")
-        .whitelist_type("TfLiteExternalContext")
+        .allowlist_type("TfLiteTensor")
+        .allowlist_type("TfLiteRegistration")
+        .allowlist_type("TfLiteExternalContext")
         .opaque_type("std::string")
         .opaque_type("flatbuffers::NativeTable")
-        .blacklist_type("std")
-        .blacklist_type("tflite::Interpreter_TfLiteDelegatePtr")
-        .blacklist_type("tflite::Interpreter_State")
+        .blocklist_type("std")
+        .blocklist_type("tflite::Interpreter_TfLiteDelegatePtr")
+        .blocklist_type("tflite::Interpreter_State")
         .default_enum_style(EnumVariation::Rust { non_exhaustive: false })
         .derive_partialeq(true)
         .derive_eq(true)
@@ -530,6 +546,7 @@ fn import_tflite_types() {
         .clang_arg(format!("-I{}/tensorflow/tensorflow/lite/tools/make/downloads/flatbuffers", submodules_str))
         .clang_arg(format!("-I{}/tensorflow/tensorflow/lite/tools/make/downloads/flatbuffers/include", submodules_str))
         .clang_arg("-DGEMMLOWP_ALLOW_SLOW_SCALAR_FALLBACK")
+        .clang_arg("-DFLATBUFFERS_POLYMORPHIC_NATIVETABLE")
         .clang_arg("-x")
         .clang_arg("c++")
         .clang_arg("-std=c++11")
@@ -554,6 +571,7 @@ fn build_inline_cpp() {
         .flag("-std=c++14")
         .flag("-Wno-sign-compare")
         .define("GEMMLOWP_ALLOW_SLOW_SCALAR_FALLBACK", None)
+        .define("FLATBUFFERS_POLYMORPHIC_NATIVETABLE", None)
         .debug(true)
         .opt_level(if cfg!(debug_assertions) { 0 } else { 2 })
         .build("src/lib.rs");
