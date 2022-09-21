@@ -428,13 +428,18 @@ fn remove_unnecessary_sources() {
 
     if download_directory.exists() {
         let cleanup_script = submodules.join("cleanup-downloads.sh");
-        println!("Executing {:?}", cleanup_script);
+        
+        if cleanup_script.exists() {
+            println!("Executing {:?}", cleanup_script);
 
-        std::process::Command::new(&cleanup_script)
-            .status()
-            .expect("Unable to cleanup unnecessary download dependencies");
+            std::process::Command::new(&cleanup_script)
+                .status()
+                .expect("Unable to cleanup unnecessary download dependencies");
 
-        println!("Removing unnecessary download files took {:?}", start.elapsed());
+            println!("Removing unnecessary download files took {:?}", start.elapsed());
+        } else {
+            println!("Cleanup script does not exist at {:?}", &cleanup_script);
+        }
     }
 }
 
@@ -447,31 +452,28 @@ fn patch_flatbuffers() {
     let flatbuffers = std::fs::read_to_string(&flatbuffers_h)
         .expect("Unable to read flatbuffers.h");
   
+    let original = "struct NativeTable {};";
+
     let replacement = "#ifdef FLATBUFFERS_POLYMORPHIC_NATIVETABLE
     struct NativeTable { virtual ~NativeTable() {} };
 #else 
     struct NativeTable { }; 
 #endif";
 
-    println!("writing patch to flatbuffers.h ..");
-    std::fs::write(
-        flatbuffers_h,
-        flatbuffers.replacen(
-            "struct NativeTable {};",
-            replacement,
-            1
-        ),
-    )
-
-    // std::fs::write(
-    //     flatbuffers_h,
-    //     flatbuffers.replace(
-    //         "struct NativeTable {};",
-    //         "struct NativeTable { virtual ~NativeTable() {} };",
-    //     ),
-    // )
-    .expect("Unable to write to flatbuffers.h");
-    println!("Patching flatbuffers.h done");
+    if flatbuffers.find(original) != None {
+        println!("writing patch to flatbuffers.h ..");
+        std::fs::write(
+            flatbuffers_h,
+            flatbuffers.replacen(
+                original,
+                replacement,
+                1
+            ),
+        ).expect("Unable to write to flatbuffers.h");
+        println!("Patching flatbuffers.h done");
+    } else {
+        println!("Passing patch of flatbuffers.h")
+    }
 }
 
 fn move_tflite_source() -> PathBuf {
@@ -485,7 +487,7 @@ fn move_tflite_source() -> PathBuf {
         overwrite: true,
         skip_exist: false,
         buffer_size: 65536,
-        copy_inside: false,
+        copy_inside: true,  // was false
         content_only: false,
         depth: 0,
     };
@@ -542,7 +544,6 @@ fn import_tflite_types() {
         .derive_eq(true)
         .header("csrc/tflite_wrapper.hpp")
         .clang_arg(format!("-I{}/tensorflow", submodules_str))
-        //.clang_arg(format!("-I{}/downloads/flatbuffers/include", submodules_str))
         .clang_arg(format!("-I{}/tensorflow/tensorflow/lite/tools/make/downloads/flatbuffers", submodules_str))
         .clang_arg(format!("-I{}/tensorflow/tensorflow/lite/tools/make/downloads/flatbuffers/include", submodules_str))
         .clang_arg("-DGEMMLOWP_ALLOW_SLOW_SCALAR_FALLBACK")

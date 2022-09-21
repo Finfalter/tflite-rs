@@ -184,7 +184,7 @@ fn flatbuffer_model_apis_mutate() {
 
 ## Tests
 
-Just executing with `cargo test` runs the tests concurrently with multiple tests. This way, there is a segmentation fault sporadically in test __flatbuffer_model_apis_inspect__ due to a race condition in the `Model`. Test with either of the following in order to execute the tests single threaded.
+Launching tests with `cargo test` runs the tests concurrently with multiple tests. This way, there is a sporadic segmentation fault due to a race condition in the `Model`. Test with either of the following in order to launch the tests single threaded and thus to prevent any race condition.
 
 ```bash
 cargo test -- --test-threads=1

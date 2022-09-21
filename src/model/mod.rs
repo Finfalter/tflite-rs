@@ -311,7 +311,6 @@ mod tests {
     use crate::{FlatBufferModel, InterpreterBuilder};
 
     #[test]
-    #[ignore]
     fn flatbuffer_model_apis_inspect() {
         assert!(Model::from_file("data.mnist10.bin").is_err());
 
