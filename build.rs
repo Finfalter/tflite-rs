@@ -256,6 +256,22 @@ use super::{{BuiltinOptions, BuiltinOptionsUnion, NativeTable}};
         "IfOptions",
         "WhileOptions",
         "DepthToSpaceOptions",
+        "NonMaxSuppressionV4Options",
+        "NonMaxSuppressionV5Options",
+        "ScatterNdOptions",
+        "SelectV2Options",
+        "DensifyOptions",
+        "SegmentSumOptions",
+        "BatchMatMulOptions",
+        "CumsumOptions",
+        "CallOnceOptions",
+        "BroadcastToOptions",
+        "Rfft2dOptions",
+        "Conv3DOptions",
+        "HashtableOptions",
+        "HashtableFindOptions",
+        "HashtableImportOptions",
+        "HashtableSizeOptions",
     ];
 
     for name in option_names {
